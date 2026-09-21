@@ -1,0 +1,14 @@
+@using DocumentProcessor.Web.Data
+@inject DatabaseInfo DatabaseInfo
+
+<footer class="db-info-footer">
+    <div class="container-fluid px-4">
+        <div class="d-flex justify-content-center align-items-center gap-4">
+            <span><i class="bi bi-database-fill-check me-2 footer-icon"></i><strong>@DatabaseInfo.DisplayName</strong></span>
+            <span class="text-muted">|</span>
+            <span><i class="bi bi-shield-lock-fill me-2 footer-icon"></i>@DatabaseInfo.CredentialSource</span>
+            <span class="text-muted">|</span>
+            <span><i class="bi bi-hdd-network-fill me-2 footer-icon"></i>@DatabaseInfo.HostAddress</span>
+        </div>
+    </div>
+</footer>

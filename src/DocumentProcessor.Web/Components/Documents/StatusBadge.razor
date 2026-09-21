@@ -1,0 +1,26 @@
+@using DocumentProcessor.Web.Models
+
+<span class="badge @CssClass" title="@Status">
+    <i class="bi @Icon status-badge-icon"></i>
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public DocumentStatus Status { get; set; }
+
+    private string CssClass => Status switch
+    {
+        DocumentStatus.Processed => "bg-success",
+        DocumentStatus.Processing => "bg-warning",
+        DocumentStatus.Failed => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string Icon => Status switch
+    {
+        DocumentStatus.Processed => "bi-check-circle-fill",
+        DocumentStatus.Processing => "bi-hourglass-split",
+        DocumentStatus.Failed => "bi-x-circle-fill",
+        _ => "bi-clock-fill"
+    };
+}

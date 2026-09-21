@@ -1,6 +1,6 @@
 # 📄 Document Processing System
 
-A streamlined document processing application built with .NET 8 Blazor Server that leverages AWS Bedrock AI for intelligent document analysis and summarization.
+A streamlined document processing application built with .NET 10 Blazor Server that leverages AWS Bedrock AI for intelligent document analysis and summarization.
 
 ![Application Dashboard](screenshots/dashboard.png)
 
@@ -11,7 +11,7 @@ A streamlined document processing application built with .NET 8 Blazor Server th
 - **📤 Easy Upload**: Drag-and-drop interface for document uploads
 - **☁️ Flexible Storage**: Support for both AWS S3 and local file storage
 - **🔐 Secure Credentials**: AWS Secrets Manager integration for database connection strings
-- **💾 Database Support**: Works with both SQL Server and PostgreSQL
+- **💾 Database Support**: Microsoft SQL Server via Entity Framework Core
 - **📊 Document Management**: Track upload status, view summaries, and manage documents
 - **🔄 Status Tracking**: Real-time processing status (Pending, Processing, Processed, Failed)
 
@@ -34,8 +34,8 @@ DPS/
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
-- SQL Server or PostgreSQL database
+- .NET 10.0 SDK or later
+- Docker (to run SQL Server locally) or an existing SQL Server instance
 - AWS Account with:
   - Bedrock access (Claude 3.7 Sonnet model)
   - S3 bucket (optional, for cloud storage)
@@ -64,21 +64,38 @@ DPS/
    export AWS_DEFAULT_REGION=us-east-1
    ```
 
-3. **Set Up Database Credentials in AWS Secrets Manager**
+3. **Start SQL Server in Docker**
 
-   The application retrieves database credentials from AWS Secrets Manager. Create secrets with the following structure:
+   The app talks to SQL Server. The included Compose file runs it locally:
+   ```bash
+   docker compose up -d
+   ```
 
-   **For PostgreSQL** (secret name: `atx-db-modernization-atx-db-modernization-1-target`):
+   This starts `mcr.microsoft.com/mssql/server:2022-latest` on port 1433 with the `sa`
+   password `LocalDev!Passw0rd`, matching the default connection string in
+   `appsettings.json`. Override it by setting `MSSQL_SA_PASSWORD` before `docker compose up`
+   (update the connection string to match). Data persists in the `sqlserver-data` volume.
+
+   The app calls `EnsureCreatedAsync()` at startup, so the `DPS` database and `Documents`
+   table are created automatically on first run — no migration step needed.
+
+4. **Configure Application Settings** (Optional)
+
+   `src/DocumentProcessor.Web/appsettings.json` points at the Docker instance by default:
    ```json
    {
-     "username": "your_username",
-     "password": "your_password",
-     "host": "your-db-host.rds.amazonaws.com",
-     "port": "5432"
+     "ConnectionStrings": {
+       "DefaultConnection": "Server=localhost,1433;Database=DPS;User Id=sa;Password=LocalDev!Passw0rd;TrustServerCertificate=true;MultipleActiveResultSets=true"
+     },
+     "Database": {
+       "UseSecretsManager": false
+     }
    }
    ```
 
-   **For SQL Server** (secret with description: `Password for RDS MSSQL used for MAM319.`):
+   To use an RDS SQL Server instance instead of Docker, set `Database:UseSecretsManager` to
+   `true` and create a Secrets Manager secret with the description
+   `Password for RDS MSSQL used for MAM319.`:
    ```json
    {
      "username": "your_username",
@@ -88,23 +105,7 @@ DPS/
      "dbname": "your_database_name"
    }
    ```
-
-4. **Configure Application Settings** (Optional)
-
-   Update `src/DocumentProcessor.Web/appsettings.json` for local development fallback:
-   ```json
-   {
-     "ConnectionStrings": {
-       "DefaultConnection": "Server=localhost;Database=DocumentProcessor;Integrated Security=true;TrustServerCertificate=True;"
-     },
-     "Logging": {
-       "LogLevel": {
-         "Default": "Information",
-         "Microsoft.AspNetCore": "Warning"
-       }
-     }
-   }
-   ```
+   If the lookup fails, the app logs a warning and falls back to `DefaultConnection`.
 
 5. **Run the application**
    ```bash
@@ -137,18 +138,18 @@ The application supports two storage backends:
 
 Storage is configured automatically based on AWS credentials availability.
 
-### Database Flexibility
+### Database
 
-- **SQL Server**: Primary database support with Entity Framework Core
-- **PostgreSQL**: Alternative database option for cloud deployments
-- **Automatic Migration**: Database schema created automatically on first run
+- **SQL Server**: The only supported provider, via Entity Framework Core
+- **Local Development**: SQL Server 2022 in Docker (see `docker-compose.yml`)
+- **Automatic Creation**: Database schema created automatically on first run
 
 ## 🛠️ Technology Stack
 
 - **Backend**:
-  - .NET 8 with C# 12
+  - .NET 10 with C# 14
   - ASP.NET Core Blazor Server
-  - Entity Framework Core 8
+  - Entity Framework Core 10
 
 - **Frontend**:
   - Blazor Server-Side Rendering
@@ -156,8 +157,8 @@ Storage is configured automatically based on AWS credentials availability.
   - Custom CSS for styling
 
 - **Database**:
-  - Microsoft SQL Server (EntityFrameworkCore.SqlServer 8.0.10)
-  - PostgreSQL support (via configuration)
+  - Microsoft SQL Server (EntityFrameworkCore.SqlServer 10.0.12)
+  - SQL Server 2022 in Docker for local development
 
 - **Cloud Services**:
   - AWS Bedrock (Claude 3.7 Sonnet for AI processing)
@@ -217,10 +218,10 @@ DocumentProcessor.Web/uploads/
 
 ### Database Connection
 
-The app attempts to connect in this order:
-1. AWS Secrets Manager (PostgreSQL target secret)
-2. AWS Secrets Manager (SQL Server with "MAM319" description)
-3. Local connection string from appsettings.json
+The app resolves its SQL Server connection string as follows:
+1. `ConnectionStrings:DefaultConnection` from appsettings.json (points at Docker by default)
+2. If `Database:UseSecretsManager` is `true`, AWS Secrets Manager (SQL Server secret with
+   the "MAM319" description) overrides it; on failure it falls back to step 1
 
 ## 🔒 Security Features
 
@@ -246,14 +247,15 @@ Documents progress through the following states:
 
 The application is designed for AWS deployment:
 
-1. **Database**: RDS (SQL Server or PostgreSQL)
+1. **Database**: RDS for SQL Server
 2. **Storage**: S3 for document files
 3. **Compute**: Elastic Beanstalk, ECS, or EC2
 4. **Credentials**: Secrets Manager for sensitive data
 
-### Docker (Future)
+### Docker
 
-Docker support can be added with a standard .NET 8 Dockerfile.
+`docker-compose.yml` runs SQL Server 2022 for local development. The web app itself still
+runs on the host via `dotnet run`; containerizing it would need a standard .NET 10 Dockerfile.
 
 ## 🆘 Troubleshooting
 
@@ -305,11 +307,11 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- Built with [.NET 8](https://dotnet.microsoft.com/)
+- Built with [.NET 10](https://dotnet.microsoft.com/)
 - AI powered by [AWS Bedrock](https://aws.amazon.com/bedrock/)
 - UI framework by [Bootstrap](https://getbootstrap.com/)
 - PDF processing by [PdfPig](https://github.com/UglyToad/PdfPig)
 
 ---
 
-**Built with ❤️ using .NET 8 and AWS Bedrock AI**
+**Built with ❤️ using .NET 10 and AWS Bedrock AI**
