@@ -1,72 +1,93 @@
-# 📄 Document Processing System
+# 📄 Document Processing System — .NET Framework 4.8 / Web Forms
 
-A single-project .NET 10 Blazor Server application that summarizes uploaded documents with
-Claude Sonnet 5 on Amazon Bedrock, storing results in SQL Server.
+An ASP.NET Web Forms application that summarizes uploaded documents with Claude Sonnet 5 on
+Amazon Bedrock, storing results in SQL Server.
 
-![Application Dashboard](screenshots/dashboard.png)
+This is the **legacy counterpart** of the `modernize-net10-sqlserver` branch, which holds the
+same application as a .NET 10 Blazor Server app. Same features, same database, same visual
+design — written the way it would have been written in 2015. It exists to be a realistic
+"before" state for a .NET modernization exercise.
 
-## 🌟 Key Features
+## 🌟 Features
 
 - **🤖 AI Summaries**: Amazon Bedrock Converse API with Claude Sonnet 5
 - **📄 Text Extraction**: PDF text extraction via PdfPig, plus plain-text and log files
-- **📤 Upload**: Drag-and-drop or file picker, with size and file-type validation
+- **📤 Upload**: Drag files onto the dropzone or browse, with size and file-type validation
 - **🗂️ Document List**: Newest first, with upload timestamp, status, and summary preview
-- **💾 SQL Server**: Entity Framework Core 10, with a local instance in Docker
+- **💾 SQL Server**: Entity Framework 6 code-first, with a local instance in Docker
 - **🔐 Credentials**: Optional AWS Secrets Manager lookup for RDS credentials
 - **🧭 Provider Indicator**: Header pill reports the database engine actually in use
 
 ## 🏗️ Architecture
 
-One ASP.NET Core project. Interactive Server components render the UI; a small pipeline
-handles storage, extraction, and summarization.
+One ASP.NET Web Forms project. A master page supplies the shell, two user controls cover
+upload and listing, and a small pipeline handles storage, extraction, and summarization.
 
 ```
-src/DocumentProcessor.Web/
-├── Components/
-│   ├── Documents/      # DocumentList, DocumentUploader, StatusBadge
-│   ├── Layout/         # MainLayout, DatabaseIndicator, DatabaseFooter
-│   ├── Pages/          # Home, Error
-│   └── Shared/         # ModalDialog
-├── Configuration/      # BedrockOptions, StorageOptions, DatabaseOptions
-├── Data/               # AppDbContext, connection resolution
-├── Extensions/         # DI registration
-├── Models/             # Document, DocumentStatus, Notification
-├── Services/           # Storage, text extraction, summarization, pipeline
-└── wwwroot/            # app.css, Bootstrap
+src/DocumentProcessor.WebForms/
+├── App_Data/
+│   ├── Schema.sql            # Documents table, created on first run
+│   └── uploads/              # date-partitioned upload storage (not served by IIS)
+├── Configuration/
+│   └── AppSettings.cs        # typed reads over ConfigurationManager
+├── Content/                  # Site.css, Bootstrap
+├── Controls/
+│   ├── DocumentList.ascx     # Repeater, status badges, view/delete commands
+│   └── DocumentUploader.ascx # FileUpload, validation, notices
+├── Data/
+│   ├── DatabaseConnectionResolver.cs
+│   ├── DatabaseInitializer.cs
+│   ├── DatabaseInfo.cs
+│   └── DocumentDbContext.cs  # EF6
+├── Models/                   # Document, DocumentStatus, Notification
+├── Scripts/                  # Bootstrap bundle
+├── Services/                 # storage, text extraction, summarization, pipeline
+├── Default.aspx              # the one page: grid, UpdatePanel, modals
+├── ErrorPage.aspx
+├── Global.asax               # startup: TLS, connection resolve, schema, tracing
+├── Site.Master               # app bar, database pill, footer
+└── Web.config
 ```
 
 Upload flow:
 
 ```
-Browser → Home.SaveAsync → IDocumentStorage (disk)
-                         → AppDbContext (row, status Pending)
+Browser → Default.aspx postback → IDocumentStorage (disk)
+                                → DocumentDbContext (row, status Pending)
         → DocumentPipeline → DocumentTextExtractor (PdfPig)
                            → IDocumentSummarizer (Bedrock Converse)
-                           → AppDbContext (summary, status Processed)
+                           → DocumentDbContext (summary, status Processed)
 ```
+
+Uploading is a full postback; refresh, view-summary, and delete go through an `UpdatePanel`.
+A file input cannot be posted through an asynchronous postback, which is why the uploader
+sits outside the panel.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- .NET 10.0 SDK
+- Visual Studio 2022 or later with the **ASP.NET and web development** workload, or
+  MSBuild plus the **.NET Framework 4.8 targeting pack**
+- IIS Express (installed with the workload above)
 - Docker (for local SQL Server) or an existing SQL Server instance
 - An AWS account with Bedrock access to Claude Sonnet 5 in your chosen region
 - AWS credentials available to the default SDK chain
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone the repository and check out this branch**
    ```bash
    git clone https://github.com/aws-samples/sample-document-processing-system.git
    cd sample-document-processing-system
+   git checkout legacy-net48
    ```
 
 2. **Configure AWS credentials**
    ```bash
    aws configure
    ```
-   Or export `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`.
+   Or set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`.
 
    Confirm the model is reachable:
    ```bash
@@ -83,225 +104,107 @@ Browser → Home.SaveAsync → IDocumentStorage (disk)
    ```
 
    Runs `mcr.microsoft.com/mssql/server:2022-latest` on port 1433 with the `sa` password
-   `LocalDev!Passw0rd`, matching the default connection string. Override it by setting
-   `MSSQL_SA_PASSWORD` before `docker compose up` and updating the connection string to
-   match. Data persists in the `sqlserver-data` volume.
+   `LocalDev!Passw0rd`, matching the connection string in `Web.config`. Override it by
+   setting `MSSQL_SA_PASSWORD` before `docker compose up` and updating the connection
+   string to match. Data persists in the `sqlserver-data` volume.
 
-4. **Run the application**
+4. **Restore packages and build**
+
+   This project uses `packages.config`, so restore runs through MSBuild rather than
+   `dotnet restore`:
    ```bash
-   cd src/DocumentProcessor.Web
-   dotnet run
+   msbuild DocumentProcessor.sln -t:Restore -p:RestorePackagesConfig=true
+   msbuild DocumentProcessor.sln -t:Build -p:Configuration=Debug
    ```
 
-   The `DPS` database and `Documents` table are created on first run.
+   In Visual Studio, opening the solution and pressing F5 does both.
 
-5. **Open the app**
+5. **Run the application**
 
-   Navigate to <https://localhost:7266>. The HTTP port redirects there.
+   From Visual Studio, press F5. To run it without the IDE:
+   ```bash
+   "C:\Program Files\IIS Express\iisexpress.exe" \
+     /path:"%CD%\src\DocumentProcessor.WebForms" /port:44821
+   ```
 
-## 📋 Features Overview
+   The `DPS` database and `Documents` table are created on first request.
 
-![Upload panel](screenshots/upload.png)
+6. **Open the app**
 
-### Upload and processing
+   Navigate to <http://localhost:44821/>.
 
-- Drag files onto the drop zone or click **Browse files**
-- `.pdf`, `.txt`, and `.log` are accepted, up to 50 MB and 10 files per upload
-- Rejected files report why, inline
-- Each document is saved to disk, recorded, then summarized
+## ⚙️ Configuration
 
-Uploads are processed synchronously, so the request stays open until Bedrock responds.
+Everything lives in `Web.config`. `Configuration/AppSettings.cs` reads it; there is no
+validation at startup, so a malformed value surfaces as an exception the first time the
+setting is touched.
 
-### Document list
+| Setting | Default | Notes |
+|---|---|---|
+| `ConnectionStrings:DefaultConnection` | `localhost,1433` / `DPS` | SQL Server |
+| `Database.UseSecretsManager` | `false` | When true, credentials come from Secrets Manager |
+| `Database.SecretDescriptionPrefix` | `Password for RDS MSSQL used for MAM319.` | Secret is matched on its description |
+| `Bedrock.Region` | `us-east-1` | |
+| `Bedrock.SummarizationModelId` | `global.anthropic.claude-sonnet-5` | |
+| `Bedrock.MaxTokens` | `2000` | |
+| `Bedrock.MaxInputCharacters` | `10000` | Characters of extracted text sent to the model |
+| `Bedrock.MaxPdfPages` | `5` | |
+| `Storage.RootPath` | `~/App_Data/uploads` | Virtual path, resolved with `MapPath` |
+| `Storage.MaxFileSizeMegabytes` | `50` | |
+| `Storage.MaxFilesPerUpload` | `10` | |
+| `Storage.AllowedExtensions` | `.pdf,.txt,.log` | Comma separated |
 
-- Ordered by upload time, newest first
-- Shows file type, name, status, upload timestamp, and a two-line summary preview
-- The eye button opens the full summary; it is disabled until one exists
-- Delete is a soft delete, so rows stay in the table behind a global query filter
+`httpRuntime maxRequestLength` and `requestFiltering maxAllowedContentLength` must be large
+enough for `MaxFilesPerUpload × MaxFileSizeMegabytes`; they are set to 500 MB to match the
+defaults above. Change all of them together.
 
-## 🛠️ Technology Stack
+### Sharing a database with the .NET 10 branch
 
-- **Backend**: .NET 10, ASP.NET Core Blazor Server (Interactive Server), EF Core 10
-- **Database**: Microsoft SQL Server (2022 in Docker for local development)
-- **AI**: Amazon Bedrock Converse API, Claude Sonnet 5
-- **Documents**: PdfPig 0.1.11
-- **Frontend**: Bootstrap 5, Bootstrap Icons, custom CSS
+`App_Data/Schema.sql` creates the `Documents` table with the same column types and lengths
+that EF Core generates for the same entity, so both branches can point at one `DPS`
+database and see each other's rows. EF6's initializer is disabled
+(`Database.SetInitializer<DocumentDbContext>(null)`) so it never tries to own the schema or
+write a `__MigrationHistory` table.
 
-## 🔧 Configuration
+### Logging
 
-All settings live in `src/DocumentProcessor.Web/appsettings.json` and bind to option
-classes validated at startup, so a bad value fails the build-up rather than the first
-request.
+Errors go to `System.Diagnostics.Trace`. `Global.asax` attaches a listener writing to
+`App_Data/trace.log`, which is the quickest place to look when something fails. Note that
+the listener holds the file open for the lifetime of the application, so you cannot delete
+it while the app is running. A production app would use log4net or ELMAH instead.
 
-### Bedrock
+## 🧭 Notes on the legacy design
 
-```json
-"Bedrock": {
-  "Region": "us-east-1",
-  "SummarizationModelId": "global.anthropic.claude-sonnet-5",
-  "MaxTokens": 2000,
-  "MaxInputCharacters": 10000,
-  "MaxPdfPages": 5
-}
-```
+These are deliberate, and each one is a talking point for a modernization pass.
 
-`MaxPdfPages` and `MaxInputCharacters` bound how much text is sent per document.
+- **Blocking I/O on request threads.** The .NET Framework build of the AWS SDK exposes real
+  synchronous operations, so `Converse` is called directly rather than awaited. Bedrock can
+  take tens of seconds, and each upload holds an ASP.NET thread for the whole call. That is
+  why `executionTimeout` is 600 seconds.
+- **No dependency injection.** Services are constructed at the point of use. Interfaces
+  survive on the seams that matter (`IDocumentStorage`, `IDocumentSummarizer`), and
+  `DocumentPipeline` has a constructor that accepts them, but nothing wires a container.
+- **Soft delete is manual.** EF6 has no global query filter, so every query repeats
+  `!d.IsDeleted`. Forgetting it in one place silently resurrects deleted rows.
+- **Whole uploads are buffered.** ASP.NET reads the entire multipart body before the handler
+  runs, so a ten-file batch is in memory or on disk up front. The Blazor build streams each
+  file instead.
+- **Configuration is stringly typed.** `ConfigurationManager` plus `int.Parse`, with no
+  options binding and no startup validation.
+- **State rides in ViewState.** The delete confirmation remembers its target through
+  `ViewState`, and the document list survives postbacks as serialized control state rather
+  than being requeried.
+- **The selected-file list needs script.** The server has no idea what is in a file input
+  until the form posts, so a small inline script renders the pending list. Removing one file
+  from a selection is not possible the way it is in the Blazor build, so the control offers
+  Clear instead.
 
-> **Note:** Claude Sonnet 5 rejects `temperature` and `topP`. The inference config
-> intentionally sets only `maxTokens`.
+## ✅ What has been verified
 
-### Storage
+Built with MSBuild against .NET Framework 4.8 with no warnings, precompiled with
+`aspnet_compiler` to check every `.aspx`/`.ascx` and data-binding expression, and exercised
+end to end against the Dockerized SQL Server and live Bedrock: upload → disk → database →
+text extraction → summary → list ordering → view-summary modal → delete confirmation →
+soft delete → refresh.
 
-```json
-"Storage": {
-  "RootPath": "uploads",
-  "MaxFileSizeMegabytes": 50,
-  "MaxFilesPerUpload": 10,
-  "AllowedExtensions": [ ".pdf", ".txt", ".log" ]
-}
-```
-
-Files are written to `uploads/yyyy/MM/dd/`. Only extensions the extractor can read should
-be listed here.
-
-### Database
-
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost,1433;Database=DPS;User Id=sa;Password=LocalDev!Passw0rd;TrustServerCertificate=true;MultipleActiveResultSets=true"
-},
-"Database": {
-  "UseSecretsManager": false
-}
-```
-
-Set `Database:UseSecretsManager` to `true` to build the connection string from an AWS
-Secrets Manager secret whose description starts with
-`Password for RDS MSSQL used for MAM319.`:
-
-```json
-{
-  "username": "your_username",
-  "password": "your_password",
-  "host": "your-db-host.rds.amazonaws.com",
-  "port": "1433",
-  "dbname": "your_database_name"
-}
-```
-
-If the lookup fails, the app logs a warning and falls back to `DefaultConnection`.
-
-## 🐘 Migrating to Aurora PostgreSQL
-
-The app targets SQL Server today and is structured so the engine can change in one place.
-
-- `DatabaseConnectionResolver.DetectProvider` infers the engine from the connection string
-  (`Host=`/`Username=` means Npgsql; `Server=`/`User Id=` means SQL Server)
-- `DatabaseIndicator` and the footer report that provider, so a successful migration is
-  visible in the UI rather than assumed
-- `ServiceCollectionExtensions.AddDocumentProcessing` has the single provider switch and
-  currently throws a clear error for PostgreSQL instead of passing Npgsql syntax to
-  `SqlClient`
-
-To complete a migration:
-
-1. Add `Npgsql.EntityFrameworkCore.PostgreSQL`
-2. Add the `DatabaseProvider.PostgreSql` arm calling `UseNpgsql`
-3. Point `DefaultConnection` at the Aurora cluster
-
-The entity configuration uses no SQL-Server-specific types, so the mapping ports unchanged.
-
-## 📊 Document Status States
-
-| Status | Meaning |
-|---|---|
-| `Pending` | Row created, not yet processed |
-| `Processing` | Text extraction and summarization under way |
-| `Processed` | Summary stored |
-| `Failed` | Extraction or the Bedrock call threw; see logs |
-
-## 🔒 Security Notes
-
-- The `sa` password in `appsettings.json` exists only for the throwaway local container.
-  Use Secrets Manager, environment variables, or user-secrets for anything real.
-- Uploaded files are stored on local disk under `uploads/`, which is git-ignored.
-- There is no authentication; add it before exposing the app.
-
-## 🚢 Deployment
-
-- **Database**: RDS for SQL Server, or Aurora PostgreSQL after the migration above
-- **Compute**: ECS, EC2, or Elastic Beanstalk
-- **Credentials**: Secrets Manager with `Database:UseSecretsManager` enabled
-- **Schema**: `EnsureCreatedAsync()` creates the schema on first run but cannot evolve it.
-  Adopt EF Core migrations before running more than one environment.
-
-`docker-compose.yml` provisions SQL Server for development only; the app itself runs on the
-host via `dotnet run`. Containerizing it needs a standard .NET 10 Dockerfile.
-
-## 🆘 Troubleshooting
-
-### `Microsoft.AspNetCore.App` version not found
-
-The installed ASP.NET Core runtime does not match the target framework. Install the .NET 10
-runtime, or check `dotnet --list-runtimes`.
-
-### `_framework/blazor.web.js` returns 404
-
-Framework assets resolve through the static-web-assets manifest, which loads in the
-Development environment. Ensure `ASPNETCORE_ENVIRONMENT=Development` when running
-`dotnet run`; a published build serves them from `wwwroot`.
-
-### Database connection failures
-
-1. `docker compose ps` — is the container healthy?
-2. Confirm port 1433 is free and the password matches the connection string
-3. With `UseSecretsManager` enabled, check the warning logged at startup
-
-### Bedrock access errors
-
-1. Confirm model access is granted for Claude Sonnet 5 in the configured region
-2. `aws bedrock list-inference-profiles` — is `global.anthropic.claude-sonnet-5` active?
-3. `AccessDeniedException` means the caller lacks `bedrock:InvokeModel`
-4. A `temperature`/`topP` validation error means sampling parameters were reintroduced
-
-### Upload issues
-
-1. Only `.pdf`, `.txt`, and `.log` are accepted; others are rejected at selection
-2. Files over `MaxFileSizeMegabytes` are rejected
-3. A `Failed` status means extraction or the Bedrock call threw — check the logs
-4. Scanned PDFs with no text layer yield little for the model to summarize
-
-## 🗺️ Roadmap
-
-- EF Core migrations in place of `EnsureCreatedAsync`
-- Aurora PostgreSQL support
-- Background processing so uploads return immediately
-- Additional formats (DOCX, XLSX, images via OCR)
-- Document classification persisted to a `Category` column
-- Search, filtering, and pagination
-- Authentication
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
-
-- Built with [.NET 10](https://dotnet.microsoft.com/)
-- AI powered by [Amazon Bedrock](https://aws.amazon.com/bedrock/)
-- UI framework by [Bootstrap](https://getbootstrap.com/)
-- PDF processing by [PdfPig](https://github.com/UglyToad/PdfPig)
-
----
-
-**Built with ❤️ using .NET 10 and Claude Sonnet 5 on Amazon Bedrock**
+No screenshots are checked in on this branch.

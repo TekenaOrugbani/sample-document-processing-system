@@ -463,3 +463,13 @@ appsettings.Staging.json
 # Temporary files
 *.tmp
 temp/
+# NuGet packages.config restore target for the .NET Framework build
+/packages/
+!src/**/packages.config
+
+# Runtime state of the Web Forms application
+src/DocumentProcessor.WebForms/App_Data/uploads/
+src/DocumentProcessor.WebForms/App_Data/trace.log
+
+# ASP.NET dynamic compilation output, if it ever lands inside the project
+src/DocumentProcessor.WebForms/_*/
