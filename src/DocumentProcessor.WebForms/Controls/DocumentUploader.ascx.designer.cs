@@ -29,7 +29,7 @@ namespace DocumentProcessor.WebForms.Controls
         /// <summary>
         /// UploadButton control.
         /// </summary>
-        protected global::System.Web.UI.WebControls.Button UploadButton;
+        protected global::System.Web.UI.WebControls.LinkButton UploadButton;
 
         /// <summary>
         /// NoticeRepeater control.

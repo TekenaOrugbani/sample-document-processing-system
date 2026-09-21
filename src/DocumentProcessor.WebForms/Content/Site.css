@@ -454,3 +454,16 @@ a.btn-icon, a.btn-quiet, a.btn-brand {
     place-items: center;
     padding: 1.5rem;
 }
+
+.upload-status {
+    margin-top: 0.85rem;
+    color: var(--ink-muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+/* Busy state for the upload button while its postback is in flight. */
+.is-busy {
+    opacity: 0.65;
+    cursor: default;
+}

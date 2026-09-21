@@ -21,10 +21,20 @@
 <ul id="selectedList" class="selected-list"></ul>
 
 <div id="uploadActions" class="d-flex gap-2 mt-3" style="display: none;">
-    <asp:Button ID="UploadButton" runat="server" CssClass="btn-brand"
-        Text="Upload" OnClick="UploadButton_Click" />
+    <%-- A LinkButton rather than a Button: the busy state needs a spinner element inside the
+         control, and posting through __doPostBack means suppressing a second click cannot
+         stop the first one from reaching the server. --%>
+    <asp:LinkButton ID="UploadButton" runat="server" CssClass="btn-brand" OnClick="UploadButton_Click">
+        <span id="uploadIdleLabel">Upload</span>
+        <span id="uploadBusyLabel" style="display: none;">
+            <span class="spinner-border spinner-border-sm me-1"></span>Uploading...
+        </span>
+    </asp:LinkButton>
     <button type="button" id="clearButton" class="btn-quiet">Clear</button>
 </div>
+
+<%-- Summarizing happens inside the postback, so the wait can be long. Say so. --%>
+<p id="uploadStatus" class="upload-status" style="display: none;"></p>
 
 <asp:Repeater ID="NoticeRepeater" runat="server">
     <ItemTemplate>
@@ -42,6 +52,10 @@
         var list = document.getElementById('selectedList');
         var actions = document.getElementById('uploadActions');
         var clearButton = document.getElementById('clearButton');
+        var idleLabel = document.getElementById('uploadIdleLabel');
+        var busyLabel = document.getElementById('uploadBusyLabel');
+        var status = document.getElementById('uploadStatus');
+        var submitting = false;
 
         function formatSize(bytes) {
             var units = ['B', 'KB', 'MB', 'GB'];
@@ -68,7 +82,7 @@
             }
 
             actions.style.display = files.length > 0 ? '' : 'none';
-            uploadButton.value = files.length === 1
+            idleLabel.textContent = files.length === 1
                 ? 'Upload 1 file'
                 : 'Upload ' + files.length + ' files';
         }
@@ -78,7 +92,31 @@
             render();
         }
 
+        // The page is replaced wholesale by the postback, so this busy state only has to
+        // survive until the response arrives. Nothing needs to undo it.
+        function startUpload() {
+            if (submitting) {
+                return false;
+            }
+
+            submitting = true;
+            idleLabel.style.display = 'none';
+            busyLabel.style.display = '';
+            uploadButton.className = 'btn-brand is-busy';
+            clearButton.disabled = true;
+
+            var count = picker.files.length;
+            status.textContent = 'Uploading ' + count + (count === 1 ? ' file' : ' files')
+                + '. Each document is summarized before the page comes back, so this can take'
+                + ' a while. Leaving the page cancels it.';
+            status.style.display = '';
+        }
+
         picker.onchange = render;
         clearButton.onclick = reset;
+
+        // Returning false from here would cancel the LinkButton's postback, which is exactly
+        // what should happen on a second click.
+        uploadButton.onclick = startUpload;
     })();
 </script>

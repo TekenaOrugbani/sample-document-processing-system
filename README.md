@@ -198,6 +198,13 @@ These are deliberate, and each one is a talking point for a modernization pass.
   until the form posts, so a small inline script renders the pending list. Removing one file
   from a selection is not possible the way it is in the Blazor build, so the control offers
   Clear instead.
+- **Upload progress is a client-side illusion.** A full postback gives the server no way to
+  report progress, so script swaps the button into a spinner and prints a waiting notice
+  before the form goes. The Blazor build shows a per-file result as each one finishes,
+  because its render loop can yield mid-upload; here every notice appears at once when the
+  response lands. Note the upload control is a `LinkButton`, not a `Button`: disabling a
+  submit button before the post strips its name from the request and the server-side Click
+  handler never runs, whereas `__doPostBack` carries the target in `__EVENTTARGET`.
 
 ## ✅ What has been verified
 
