@@ -1,18 +1,24 @@
 namespace DocumentProcessor.Web.Models;
 
-public enum DocumentStatus { Pending, Processing, Processed, Failed }
+public enum DocumentStatus
+{
+    Pending,
+    Processing,
+    Processed,
+    Failed
+}
 
 public class Document
 {
-    public Guid Id { get; set; }
-    public string FileName { get; set; } = string.Empty;
-    public string OriginalFileName { get; set; } = string.Empty;
-    public string FileExtension { get; set; } = string.Empty;
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public required string FileName { get; set; }
+    public required string OriginalFileName { get; set; }
+    public required string FileExtension { get; set; }
     public long FileSize { get; set; }
-    public string ContentType { get; set; } = string.Empty;
+    public required string ContentType { get; set; }
     public string StoragePath { get; set; } = string.Empty;
     public DocumentStatus Status { get; set; }
     public string? Summary { get; set; }
-    public string UploadedBy { get; set; } = string.Empty;
+    public string UploadedBy { get; set; } = "System";
     public bool IsDeleted { get; set; }
 }

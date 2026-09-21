@@ -1,0 +1,69 @@
+@using DocumentProcessor.Web.Models
+
+<div class="card shadow">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">Documents</h5>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="OnRefresh" disabled="@IsLoading">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="text-center p-3"><div class="spinner-border"></div></div>
+        }
+        else if (Documents.Count == 0)
+        {
+            <p class="text-muted text-center fs-5 mb-0">No documents yet</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>File</th><th>Status</th><th>Summary</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in Documents)
+                        {
+                            <tr @key="document.Id">
+                                <td>
+                                    <i class="bi @FileIcon(document.FileExtension) me-2 file-icon"></i>@document.OriginalFileName
+                                </td>
+                                <td><StatusBadge Status="document.Status" /></td>
+                                <td class="summary-cell">@(document.Summary ?? "-")</td>
+                                <td class="action-cell">
+                                    @if (!string.IsNullOrEmpty(document.Summary))
+                                    {
+                                        <button class="btn btn-link" title="View summary" @onclick="() => OnViewSummary.InvokeAsync(document)">
+                                            <i class="bi bi-eye-fill action-icon"></i>
+                                        </button>
+                                    }
+                                    <button class="btn btn-link text-danger" title="Delete" @onclick="() => OnDelete.InvokeAsync(document)">
+                                        <i class="bi bi-trash3-fill action-icon"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Document> Documents { get; set; } = [];
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<Document> OnViewSummary { get; set; }
+    [Parameter] public EventCallback<Document> OnDelete { get; set; }
+
+    private static string FileIcon(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => "bi-file-pdf-fill text-danger",
+        ".txt" or ".log" => "bi-file-text-fill",
+        _ => "bi-file-earmark-fill"
+    };
+}
