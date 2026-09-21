@@ -1,9 +1,15 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+    <DatabaseIndicator />
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<DatabaseFooter />

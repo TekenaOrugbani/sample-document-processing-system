@@ -1,7 +1,7 @@
 @using DocumentProcessor.Web.Models
 
-<span class="badge @CssClass" title="@Status">
-    <i class="bi @Icon status-badge-icon"></i>
+<span class="status-pill @CssClass">
+    <i class="bi @Icon"></i>@Status
 </span>
 
 @code {
@@ -10,17 +10,17 @@
 
     private string CssClass => Status switch
     {
-        DocumentStatus.Processed => "bg-success",
-        DocumentStatus.Processing => "bg-warning",
-        DocumentStatus.Failed => "bg-danger",
-        _ => "bg-secondary"
+        DocumentStatus.Processed => "status-processed",
+        DocumentStatus.Processing => "status-processing",
+        DocumentStatus.Failed => "status-failed",
+        _ => "status-pending"
     };
 
     private string Icon => Status switch
     {
-        DocumentStatus.Processed => "bi-check-circle-fill",
+        DocumentStatus.Processed => "bi-check-lg",
         DocumentStatus.Processing => "bi-hourglass-split",
-        DocumentStatus.Failed => "bi-x-circle-fill",
-        _ => "bi-clock-fill"
+        DocumentStatus.Failed => "bi-x-lg",
+        _ => "bi-clock"
     };
 }
