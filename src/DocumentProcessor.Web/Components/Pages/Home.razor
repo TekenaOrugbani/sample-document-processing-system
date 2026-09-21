@@ -8,40 +8,28 @@
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject IDocumentStorage Storage
 @inject DocumentPipeline Pipeline
+@inject TimeProvider TimeProvider
 @inject ILogger<Home> Logger
 @rendermode InteractiveServer
 
 <PageTitle>Document Processor</PageTitle>
 
-<div class="container-fluid mt-4 px-4 pb-5">
-    <h1 class="mb-2 text-white">Document Processor</h1>
-    <p class="welcome-note mb-3">
-        <i class="bi bi-stars me-2"></i>Upload a document and I will summarize it for you
-    </p>
+<div class="app-grid">
+    <section>
+        <DocumentUploader IsUploading="_isUploading"
+                          Notifications="_notifications"
+                          OnUpload="UploadAsync"
+                          OnNotify="Notify" />
+    </section>
 
-    <DatabaseBanner />
-
-    <div class="row mb-3">
-        <div class="col-12">
-            <DocumentTable Documents="_documents"
-                           IsLoading="_isLoading"
-                           OnRefresh="LoadDocumentsAsync"
-                           OnViewSummary="doc => _summaryTarget = doc"
-                           OnDelete="doc => _deleteTarget = doc" />
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-12">
-            <DocumentUploader IsUploading="_isUploading"
-                              Notifications="_notifications"
-                              OnUpload="UploadAsync"
-                              OnNotify="Notify" />
-        </div>
-    </div>
+    <section>
+        <DocumentList Documents="_documents"
+                      IsLoading="_isLoading"
+                      OnRefresh="LoadDocumentsAsync"
+                      OnViewSummary="doc => _summaryTarget = doc"
+                      OnDelete="doc => _deleteTarget = doc" />
+    </section>
 </div>
-
-<DatabaseFooter />
 
 @if (_summaryTarget is not null)
 {
@@ -99,7 +87,7 @@
         {
             await using var db = await DbContextFactory.CreateDbContextAsync();
             _documents = await db.Documents
-                .OrderBy(d => d.OriginalFileName)
+                .OrderByDescending(d => d.UploadedAt)
                 .Take(MaxDocumentsShown)
                 .ToListAsync();
         }
@@ -149,6 +137,7 @@
             FileExtension = Path.GetExtension(file.Name).ToLowerInvariant(),
             ContentType = file.ContentType,
             FileSize = file.Size,
+            UploadedAt = TimeProvider.GetUtcNow(),
             Status = DocumentStatus.Pending
         };
 

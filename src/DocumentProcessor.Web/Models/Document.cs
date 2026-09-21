@@ -17,6 +17,7 @@ public class Document
     public long FileSize { get; set; }
     public required string ContentType { get; set; }
     public string StoragePath { get; set; } = string.Empty;
+    public DateTimeOffset UploadedAt { get; set; }
     public DocumentStatus Status { get; set; }
     public string? Summary { get; set; }
     public string UploadedBy { get; set; } = "System";

@@ -18,7 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             document.Property(d => d.ContentType).HasMaxLength(128);
             document.Property(d => d.StoragePath).HasMaxLength(512);
             document.Property(d => d.UploadedBy).HasMaxLength(128);
-            document.HasIndex(d => d.OriginalFileName);
+            document.HasIndex(d => d.UploadedAt).IsDescending();
         });
     }
 }

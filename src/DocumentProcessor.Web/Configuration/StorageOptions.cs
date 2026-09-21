@@ -15,7 +15,10 @@ public sealed class StorageOptions
     [Range(1, 50)]
     public int MaxFilesPerUpload { get; init; } = 10;
 
-    public string[] AllowedExtensions { get; init; } = [".pdf", ".txt", ".log"];
+    // No default: the configuration binder appends to an initialized collection
+    // instead of replacing it, which would duplicate every configured value.
+    [MinLength(1)]
+    public string[] AllowedExtensions { get; init; } = [];
 
     public long MaxFileSizeBytes => MaxFileSizeMegabytes * 1024L * 1024L;
 }
