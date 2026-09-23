@@ -1,0 +1,11 @@
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="rc">
+        <RouteView RouteData="rc" DefaultLayout="@typeof(DocumentProcessor.WebForms.Components.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="rc" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(DocumentProcessor.WebForms.Components.Layout.MainLayout)">
+            <p>Page not found.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

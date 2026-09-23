@@ -1,0 +1,50 @@
+@inherits LayoutComponentBase
+@using DocumentProcessor.WebForms.Data
+@inject DatabaseInfo? DbInfo
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    <span class="@DatabasePillClass">
+        <i class="@DatabasePillIconClass"></i>
+        @DatabasePillText
+    </span>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @CredentialSourceText
+    <span class="app-footer-separator">·</span>
+    Summaries stored in @ProviderNameText
+</footer>
+
+@code {
+    private string DatabasePillClass { get; set; } = "db-pill";
+    private string DatabasePillIconClass { get; set; } = "bi bi-database";
+    private string DatabasePillText { get; set; } = "Database not resolved";
+    private string CredentialSourceText { get; set; } = "unavailable";
+    private string ProviderNameText { get; set; } = "no database";
+
+    protected override void OnInitialized()
+    {
+        if (DbInfo is null)
+        {
+            return;
+        }
+
+        var isPostgres = DbInfo.Provider == DatabaseProvider.PostgreSql;
+
+        DatabasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        DatabasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        DatabasePillText = DbInfo.DisplayName + " · " + DbInfo.HostAddress;
+        CredentialSourceText = DbInfo.CredentialSource;
+        ProviderNameText = DbInfo.DisplayName;
+    }
+}
