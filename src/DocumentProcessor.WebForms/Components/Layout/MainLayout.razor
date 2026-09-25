@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+@using DocumentProcessor.WebForms.Data
+@inject DatabaseInfo? DbInfo
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    @if (DbInfo is not null)
+    {
+        var isPostgres = DbInfo.Provider == DatabaseProvider.PostgreSql;
+        <span class="@(isPostgres ? "db-pill db-pill-postgres" : "db-pill")">
+            <i class="@(isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database")"></i>
+            @(DbInfo.DisplayName) &middot; @(DbInfo.HostAddress)
+        </span>
+    }
+    else
+    {
+        <span class="db-pill">
+            <i class="bi bi-database"></i>
+            Database not resolved
+        </span>
+    }
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @(DbInfo?.CredentialSource ?? "unavailable")
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @(DbInfo?.DisplayName ?? "no database")
+</footer>
+
+@* PORT-TODO *@
+@* {"note": "TitleContent placeholder was a head-level ContentPlaceHolder. Pages that need a custom title should use <PageTitle>...</PageTitle> in their page body. The default title 'Document Processor' should be set in App.razor's <head>."} *@
