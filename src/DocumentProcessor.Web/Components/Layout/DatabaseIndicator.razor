@@ -5,7 +5,7 @@
    styling once the connection string points at Aurora. *@
 <span class="db-pill @(IsPostgres ? "db-pill-postgres" : null)">
     <i class="bi @(IsPostgres ? "bi-rocket-takeoff-fill" : "bi-database")"></i>
-    @DatabaseInfo.DisplayName · @DatabaseInfo.HostAddress
+    @DatabaseInfo.DisplayName · @DatabaseInfo.LocationLabel
 </span>
 
 @code {
