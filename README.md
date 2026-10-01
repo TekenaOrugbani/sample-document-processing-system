@@ -3,7 +3,7 @@
 An ASP.NET Web Forms application that summarizes uploaded documents with Claude Sonnet 5 on
 Amazon Bedrock, storing results in SQL Server.
 
-This is the **legacy counterpart** of the `modernize-net10-sqlserver` branch, which holds the
+This is the **legacy counterpart** of the `net10-sqlserver` branch, which holds the
 same application as a .NET 10 Blazor Server app. Same features, same database, same visual
 design — written the way it would have been written in 2015. It exists to be a realistic
 "before" state for a .NET modernization exercise.

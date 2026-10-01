@@ -80,6 +80,25 @@ h1:focus {
     white-space: nowrap;
 }
 
+.app-bar-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.runtime-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    /* .NET brand purple, filled so it reads as its own badge next to the database pill. */
+    background: #512bd4;
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 /* The PostgreSQL variant proves an Aurora migration actually landed. */
 .db-pill-postgres {
     background: var(--success-tint);

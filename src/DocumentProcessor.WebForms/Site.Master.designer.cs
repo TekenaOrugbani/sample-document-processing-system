@@ -42,6 +42,16 @@ namespace DocumentProcessor.WebForms
         protected global::System.Web.UI.WebControls.Literal DatabasePillText;
 
         /// <summary>
+        /// RuntimePillText control.
+        /// </summary>
+        protected global::System.Web.UI.WebControls.Literal RuntimePillText;
+
+        /// <summary>
+        /// SiteStylesheet control.
+        /// </summary>
+        protected global::System.Web.UI.HtmlControls.HtmlLink SiteStylesheet;
+
+        /// <summary>
         /// MainContent control.
         /// </summary>
         protected global::System.Web.UI.WebControls.ContentPlaceHolder MainContent;

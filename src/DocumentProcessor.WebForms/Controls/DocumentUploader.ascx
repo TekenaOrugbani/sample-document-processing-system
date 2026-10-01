@@ -3,7 +3,7 @@
 <h1 class="upload-title">Upload a document and I'll summarize it.</h1>
 <p class="upload-subtitle">
     <asp:Literal ID="FileTypeSummaryText" runat="server" />
-    · up to <asp:Literal ID="MaxFileSizeText" runat="server" /> MB
+    &middot; up to <asp:Literal ID="MaxFileSizeText" runat="server" /> MB
 </p>
 
 <div class="dropzone">
