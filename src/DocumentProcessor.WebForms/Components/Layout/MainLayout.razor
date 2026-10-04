@@ -1,0 +1,51 @@
+@inherits LayoutComponentBase
+@using DocumentProcessor.WebForms.Data
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    @if (_info != null)
+    {
+        <span class="@(_isPostgres ? "db-pill db-pill-postgres" : "db-pill")">
+            <i class="@(_isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database")"></i>
+            @(_info.DisplayName + " · " + _info.HostAddress)
+        </span>
+    }
+    else
+    {
+        <span class="db-pill">
+            <i class="bi bi-database"></i>
+            Database not resolved
+        </span>
+    }
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @(_info?.CredentialSource ?? "unavailable")
+    <span class="app-footer-separator">·</span>
+    Summaries stored in @(_info?.DisplayName ?? "no database")
+</footer>
+
+@code {
+    // PORT-TODO
+    // {"was": "HttpContext.Current.Application[Global.DatabaseInfoKey]", "note": "DatabaseInfo was stored in Application state by Global.asax. Register DatabaseInfo as a singleton in DI (from DatabaseConnectionResolver output) so this injection resolves.", "files": ["Program.cs"]}
+    [Inject]
+    private DatabaseInfo? _info { get; set; }
+
+    private bool _isPostgres;
+
+    protected override void OnInitialized()
+    {
+        if (_info != null)
+        {
+            _isPostgres = _info.Provider == DatabaseProvider.PostgreSql;
+        }
+    }
+}
