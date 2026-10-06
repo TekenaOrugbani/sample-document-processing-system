@@ -143,7 +143,7 @@ setting is touched.
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | `localhost,1433` / `DPS` | SQL Server |
 | `Database.UseSecretsManager` | `false` | When true, credentials come from Secrets Manager |
-| `Database.SecretDescriptionPrefix` | `Password for RDS MSSQL used for MAM319.` | Secret is matched on its description |
+| `Database.SecretDescriptionPrefix` | `Password for RDS MSSQL used for MAM417.` | Secret is matched on its description |
 | `Bedrock.Region` | `us-east-1` | |
 | `Bedrock.SummarizationModelId` | `global.anthropic.claude-sonnet-5` | |
 | `Bedrock.MaxTokens` | `2000` | |
