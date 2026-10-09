@@ -1,0 +1,17 @@
+.git
+.gitignore
+.gitmodules
+README.md
+docker-compose.yml
+docs/
+screenshots/
+**/*.md
+**/*.user
+**/*.suo
+**/.vs/
+**/bin/
+**/obj/
+**/uploads/
+**/*.db
+**/*.db-shm
+**/*.db-wal
