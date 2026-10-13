@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Documentation
+README.md
+docs/
+screenshots/
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Build artifacts
+**/bin/
+**/obj/
+
+# Local uploads
+src/DocumentProcessor.Web/uploads/
+
+# Local database files
+src/DocumentProcessor.Web/DocumentProcessor.db
+src/DocumentProcessor.Web/DocumentProcessor.db-shm
+src/DocumentProcessor.Web/DocumentProcessor.db-wal
+
+# User secrets
+**/secrets.json
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
