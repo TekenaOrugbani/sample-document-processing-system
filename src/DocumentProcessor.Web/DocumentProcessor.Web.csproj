@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <ScopedCssEnabled>false</ScopedCssEnabled>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- Restore the Blazor framework scripts (blazor.web.js) even when restore runs before the .razor files are copied, as in AWS Transform's Dockerfile. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="uploads\**" />
