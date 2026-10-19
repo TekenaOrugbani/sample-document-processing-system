@@ -1,0 +1,78 @@
+@inherits LayoutComponentBase
+@using DocumentProcessor.WebForms.Data
+@using System.Reflection
+@using System.Runtime.Versioning
+
+@* PORT-TODO *@
+@* {"note": "DatabaseInfo must be registered as a singleton service in Program.cs (resolved at startup from DatabaseConnectionResolver). Inject it here via DI. If port-asax has not yet wired this, add: builder.Services.AddSingleton<DatabaseInfo>(sp => { var conn = DatabaseConnectionResolver.Resolve(); return conn.Info; }); to Program.cs.", "files": ["Program.cs"]} *@
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @_runtimePillText
+        </span>
+        <span class="@_databasePillClass">
+            <i class="@_databasePillIconClass"></i>
+            @_databasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @_credentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @_providerNameText
+</footer>
+
+@code {
+    [Inject]
+    private DatabaseInfo? DatabaseInfo { get; set; }
+
+    private string _runtimePillText = string.Empty;
+    private string _databasePillText = string.Empty;
+    private string _databasePillClass = "db-pill";
+    private string _databasePillIconClass = "bi bi-database";
+    private string _credentialSourceText = string.Empty;
+    private string _providerNameText = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _runtimePillText = FrameworkName();
+
+        if (DatabaseInfo is null)
+        {
+            _databasePillText = "Database not resolved";
+            _credentialSourceText = "unavailable";
+            _providerNameText = "no database";
+            return;
+        }
+
+        var isPostgres = DatabaseInfo.Provider == DatabaseProvider.PostgreSql;
+
+        _databasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        _databasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        _databasePillText = DatabaseInfo.DisplayName + " \u00b7 " + DatabaseInfo.LocationLabel;
+        _credentialSourceText = DatabaseInfo.CredentialSource;
+        _providerNameText = DatabaseInfo.DisplayName;
+    }
+
+    /// <summary>The framework the app was compiled for, e.g. ".NET 10.0".</summary>
+    private static string FrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+        return target != null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
