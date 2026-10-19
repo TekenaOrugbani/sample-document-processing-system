@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+     <!-- Restore the Blazor framework scripts (blazor.web.js) even when restore runs before the .razor files are copied, as in AWS Transform's Dockerfile. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Disable scoped CSS - using regular CSS in app.css instead -->
