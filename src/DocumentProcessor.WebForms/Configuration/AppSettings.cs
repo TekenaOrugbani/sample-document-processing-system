@@ -31,7 +31,7 @@ namespace DocumentProcessor.WebForms.Configuration
 
         public static string DatabaseSecretDescriptionPrefix
         {
-            get { return GetString("Database.SecretDescriptionPrefix", "Password for RDS MSSQL used for MAM319."); }
+            get { return GetString("Database.SecretDescriptionPrefix", "Password for RDS MSSQL used for MAM417."); }
         }
 
         public static string BedrockRegion
