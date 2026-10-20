@@ -1,0 +1,34 @@
+# Git metadata
+.git
+.gitmodules
+.gitignore
+
+# Docker files
+.dockerignore
+
+# Documentation and screenshots
+docs/
+screenshots/
+README.md
+
+# Development compose file
+docker-compose.yml
+
+# Local development database files
+src/DocumentProcessor.Web/DocumentProcessor.db
+src/DocumentProcessor.Web/DocumentProcessor.db-shm
+src/DocumentProcessor.Web/DocumentProcessor.db-wal
+
+# Uploaded files (runtime data, not source)
+src/DocumentProcessor.Web/uploads/
+
+# Build output
+**/bin/
+**/obj/
+
+# IDE and OS files
+.vs/
+.vscode/
+*.user
+.DS_Store
+Thumbs.db
