@@ -139,20 +139,24 @@ Everything lives in `Web.config`. `Configuration/AppSettings.cs` reads it; there
 validation at startup, so a malformed value surfaces as an exception the first time the
 setting is touched.
 
+Keys use `:` between the group and the setting, the separator modern .NET configuration uses,
+so a port to .NET reads them unchanged from `appsettings.json` sections or from environment
+variables such as `Database__UseSecretsManager`.
+
 | Setting | Default | Notes |
 |---|---|---|
 | `ConnectionStrings:DefaultConnection` | `localhost,1433` / `DPS` | SQL Server |
-| `Database.UseSecretsManager` | `false` | When true, credentials come from Secrets Manager |
-| `Database.SecretDescriptionPrefix` | `Password for RDS MSSQL used for MAM417.` | Secret is matched on its description |
-| `Bedrock.Region` | `us-east-1` | |
-| `Bedrock.SummarizationModelId` | `global.anthropic.claude-sonnet-5` | |
-| `Bedrock.MaxTokens` | `2000` | |
-| `Bedrock.MaxInputCharacters` | `10000` | Characters of extracted text sent to the model |
-| `Bedrock.MaxPdfPages` | `5` | |
-| `Storage.RootPath` | `~/App_Data/uploads` | Virtual path, resolved with `MapPath` |
-| `Storage.MaxFileSizeMegabytes` | `50` | |
-| `Storage.MaxFilesPerUpload` | `10` | |
-| `Storage.AllowedExtensions` | `.pdf,.txt,.log` | Comma separated |
+| `Database:UseSecretsManager` | `false` | When true, credentials come from Secrets Manager |
+| `Database:SecretDescriptionPrefix` | `Password for RDS MSSQL used for MAM417.` | Secret is matched on its description |
+| `Bedrock:Region` | `us-east-1` | |
+| `Bedrock:SummarizationModelId` | `global.anthropic.claude-sonnet-5` | |
+| `Bedrock:MaxTokens` | `2000` | |
+| `Bedrock:MaxInputCharacters` | `10000` | Characters of extracted text sent to the model |
+| `Bedrock:MaxPdfPages` | `5` | |
+| `Storage:RootPath` | `~/App_Data/uploads` | Virtual path, resolved with `MapPath` |
+| `Storage:MaxFileSizeMegabytes` | `50` | |
+| `Storage:MaxFilesPerUpload` | `10` | |
+| `Storage:AllowedExtensions` | `.pdf,.txt,.log` | Comma separated |
 
 `httpRuntime maxRequestLength` and `requestFiltering maxAllowedContentLength` must be large
 enough for `MaxFilesPerUpload × MaxFileSizeMegabytes`; they are set to 500 MB to match the

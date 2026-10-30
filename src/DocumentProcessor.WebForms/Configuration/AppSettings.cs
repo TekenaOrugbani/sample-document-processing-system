@@ -26,49 +26,49 @@ namespace DocumentProcessor.WebForms.Configuration
 
         public static bool DatabaseUseSecretsManager
         {
-            get { return GetBoolean("Database.UseSecretsManager", false); }
+            get { return GetBoolean("Database:UseSecretsManager", false); }
         }
 
         public static string DatabaseSecretDescriptionPrefix
         {
-            get { return GetString("Database.SecretDescriptionPrefix", "Password for RDS MSSQL used for MAM417."); }
+            get { return GetString("Database:SecretDescriptionPrefix", "Password for RDS MSSQL used for MAM417."); }
         }
 
         public static string BedrockRegion
         {
-            get { return GetString("Bedrock.Region", "us-east-1"); }
+            get { return GetString("Bedrock:Region", "us-east-1"); }
         }
 
         public static string BedrockSummarizationModelId
         {
-            get { return GetString("Bedrock.SummarizationModelId", "global.anthropic.claude-sonnet-5"); }
+            get { return GetString("Bedrock:SummarizationModelId", "global.anthropic.claude-sonnet-5"); }
         }
 
         public static int BedrockMaxTokens
         {
-            get { return GetInt32("Bedrock.MaxTokens", 2000); }
+            get { return GetInt32("Bedrock:MaxTokens", 2000); }
         }
 
         /// <summary>Characters of extracted text sent to the model.</summary>
         public static int BedrockMaxInputCharacters
         {
-            get { return GetInt32("Bedrock.MaxInputCharacters", 10000); }
+            get { return GetInt32("Bedrock:MaxInputCharacters", 10000); }
         }
 
         public static int BedrockMaxPdfPages
         {
-            get { return GetInt32("Bedrock.MaxPdfPages", 5); }
+            get { return GetInt32("Bedrock:MaxPdfPages", 5); }
         }
 
         /// <summary>Virtual path; resolve with HostingEnvironment.MapPath before use.</summary>
         public static string StorageRootPath
         {
-            get { return GetString("Storage.RootPath", "~/App_Data/uploads"); }
+            get { return GetString("Storage:RootPath", "~/App_Data/uploads"); }
         }
 
         public static int StorageMaxFileSizeMegabytes
         {
-            get { return GetInt32("Storage.MaxFileSizeMegabytes", 50); }
+            get { return GetInt32("Storage:MaxFileSizeMegabytes", 50); }
         }
 
         public static long StorageMaxFileSizeBytes
@@ -78,14 +78,14 @@ namespace DocumentProcessor.WebForms.Configuration
 
         public static int StorageMaxFilesPerUpload
         {
-            get { return GetInt32("Storage.MaxFilesPerUpload", 10); }
+            get { return GetInt32("Storage:MaxFilesPerUpload", 10); }
         }
 
         public static string[] StorageAllowedExtensions
         {
             get
             {
-                var raw = GetString("Storage.AllowedExtensions", ".pdf,.txt,.log");
+                var raw = GetString("Storage:AllowedExtensions", ".pdf,.txt,.log");
                 return raw.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             }
         }
