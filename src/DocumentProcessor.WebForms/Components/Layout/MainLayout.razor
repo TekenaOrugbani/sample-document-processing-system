@@ -1,0 +1,75 @@
+@inherits LayoutComponentBase
+@using System.Reflection
+@using System.Runtime.Versioning
+@using DocumentProcessor.WebForms.Data
+@inject DatabaseInfo? DbInfo
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    @* Reports the engine the app is actually connected to; flips to the PostgreSQL
+       styling once the connection string points at Aurora. *@
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @RuntimePillText
+        </span>
+        <span id="DatabasePill" class="@DatabasePillClass">
+            <i class="@DatabasePillIconClass"></i>
+            @DatabasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @CredentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @ProviderNameText
+</footer>
+
+@code {
+    private string RuntimePillText = string.Empty;
+    private string DatabasePillText = string.Empty;
+    private string CredentialSourceText = string.Empty;
+    private string ProviderNameText = string.Empty;
+    private string DatabasePillClass = "db-pill";
+    private string DatabasePillIconClass = "bi bi-database";
+
+    protected override void OnInitialized()
+    {
+        RuntimePillText = FrameworkName();
+
+        if (DbInfo is null)
+        {
+            DatabasePillText = "Database not resolved";
+            CredentialSourceText = "unavailable";
+            ProviderNameText = "no database";
+            return;
+        }
+
+        var isPostgres = DbInfo.Provider == DatabaseProvider.PostgreSql;
+
+        DatabasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        DatabasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        DatabasePillText = DbInfo.DisplayName + " \u00b7 " + DbInfo.LocationLabel;
+        CredentialSourceText = DbInfo.CredentialSource;
+        ProviderNameText = DbInfo.DisplayName;
+    }
+
+    /// <summary>The framework the app was compiled for, e.g. ".NET 10.0".</summary>
+    private static string FrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+        return target != null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
