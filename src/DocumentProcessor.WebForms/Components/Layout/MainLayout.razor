@@ -1,0 +1,78 @@
+@inherits LayoutComponentBase
+@using DocumentProcessor.WebForms.Data
+@using Microsoft.AspNetCore.Hosting
+@using System.Reflection
+@using System.Runtime.Versioning
+@inject DatabaseInfo? DbInfo
+@inject IWebHostEnvironment Env
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @_runtimePillText
+        </span>
+        <span class="@_databasePillClass">
+            <i class="@_databasePillIconClass"></i>
+            @_databasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @_credentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @_providerNameText
+</footer>
+
+@* PORT-TODO *@
+@* {"note": "TitleContent placeholder removed — pages should use <PageTitle>Document Processor</PageTitle> (or their own title) to set the browser tab title via App.razor's <HeadOutlet />."} *@
+
+@code {
+    private string _runtimePillText = string.Empty;
+    private string _databasePillText = string.Empty;
+    private string _databasePillClass = "db-pill";
+    private string _databasePillIconClass = "bi bi-database";
+    private string _credentialSourceText = string.Empty;
+    private string _providerNameText = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _runtimePillText = FrameworkName();
+
+        if (DbInfo is null)
+        {
+            _databasePillText = "Database not resolved";
+            _credentialSourceText = "unavailable";
+            _providerNameText = "no database";
+            return;
+        }
+
+        var isPostgres = DbInfo.Provider == DatabaseProvider.PostgreSql;
+
+        _databasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        _databasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        _databasePillText = DbInfo.DisplayName + " \u00b7 " + DbInfo.LocationLabel;
+        _credentialSourceText = DbInfo.CredentialSource;
+        _providerNameText = DbInfo.DisplayName;
+    }
+
+    /// <summary>The framework the app was compiled for, e.g. ".NET 10.0".</summary>
+    private static string FrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+        return target is not null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
