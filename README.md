@@ -38,7 +38,8 @@ src/DocumentProcessor.WebForms/
 │   ├── DatabaseConnectionResolver.cs
 │   ├── DatabaseInitializer.cs
 │   ├── DatabaseInfo.cs
-│   └── DocumentDbContext.cs  # EF6
+│   ├── DocumentDbContext.cs  # EF6
+│   └── DocumentDbContextFactory.cs  # the one place contexts are created
 ├── Models/                   # Document, DocumentStatus, Notification
 ├── Scripts/                  # Bootstrap bundle
 ├── Services/                 # storage, text extraction, summarization, pipeline
@@ -188,6 +189,12 @@ These are deliberate, and each one is a talking point for a modernization pass.
 - **No dependency injection.** Services are constructed at the point of use. Interfaces
   survive on the seams that matter (`IDocumentStorage`, `IDocumentSummarizer`), and
   `DocumentPipeline` has a constructor that accepts them, but nothing wires a container.
+  `Global.asax` builds one `DocumentDbContextFactory` from the resolved connection string
+  and keeps it in application state; pages and the pipeline get every `DocumentDbContext`
+  from it.
+- **Only the upload save is asynchronous.** `IDocumentStorage.SaveAsync` copies with
+  `CopyToAsync`, so `Default.aspx` is an `Async="true"` page and runs the upload as a
+  registered async task. Everything after the save, Bedrock included, still blocks.
 - **Soft delete is manual.** EF6 has no global query filter, so every query repeats
   `!d.IsDeleted`. Forgetting it in one place silently resurrects deleted rows.
 - **Whole uploads are buffered.** ASP.NET reads the entire multipart body before the handler

@@ -9,20 +9,23 @@ namespace DocumentProcessor.WebForms.Services
     /// <summary>Extracts text from a stored document and saves an AI-generated summary.</summary>
     public class DocumentPipeline
     {
+        private readonly DocumentDbContextFactory _dbFactory;
         private readonly IDocumentStorage _storage;
         private readonly DocumentTextExtractor _textExtractor;
         private readonly IDocumentSummarizer _summarizer;
 
-        public DocumentPipeline()
-            : this(new FileSystemDocumentStorage(), new DocumentTextExtractor(), new BedrockDocumentSummarizer())
+        public DocumentPipeline(DocumentDbContextFactory dbFactory)
+            : this(dbFactory, new FileSystemDocumentStorage(), new DocumentTextExtractor(), new BedrockDocumentSummarizer())
         {
         }
 
         public DocumentPipeline(
+            DocumentDbContextFactory dbFactory,
             IDocumentStorage storage,
             DocumentTextExtractor textExtractor,
             IDocumentSummarizer summarizer)
         {
+            _dbFactory = dbFactory;
             _storage = storage;
             _textExtractor = textExtractor;
             _summarizer = summarizer;
@@ -30,7 +33,7 @@ namespace DocumentProcessor.WebForms.Services
 
         public void Process(Guid documentId)
         {
-            using (var db = new DocumentDbContext())
+            using (var db = _dbFactory.CreateDbContext())
             {
                 // Entity Framework 6 has no global query filter, so every query has to
                 // remember the soft-delete condition for itself.

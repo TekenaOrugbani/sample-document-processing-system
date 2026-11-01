@@ -3,6 +3,10 @@ using DocumentProcessor.WebForms.Models;
 
 namespace DocumentProcessor.WebForms.Data
 {
+    /// <summary>
+    /// Create instances through <see cref="DocumentDbContextFactory"/>, which holds the
+    /// connection string resolved at application start.
+    /// </summary>
     public class DocumentDbContext : DbContext
     {
         static DocumentDbContext()
@@ -12,14 +16,8 @@ namespace DocumentProcessor.WebForms.Data
             Database.SetInitializer<DocumentDbContext>(null);
         }
 
-        /// <summary>
-        /// Set once by Global.asax, because the connection string may come from Secrets
-        /// Manager rather than Web.config and so is not known until the app starts.
-        /// </summary>
-        public static string ConnectionString { get; set; }
-
-        public DocumentDbContext()
-            : base(ConnectionString)
+        public DocumentDbContext(string connectionString)
+            : base(connectionString)
         {
         }
 

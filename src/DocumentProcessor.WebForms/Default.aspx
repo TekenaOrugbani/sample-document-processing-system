@@ -1,4 +1,4 @@
-<%@ Page Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="DocumentProcessor.WebForms._Default" %>
+<%@ Page Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" Async="true" CodeBehind="Default.aspx.cs" Inherits="DocumentProcessor.WebForms._Default" %>
 
 <%@ Register Src="~/Controls/DocumentUploader.ascx" TagPrefix="dp" TagName="DocumentUploader" %>
 <%@ Register Src="~/Controls/DocumentList.ascx" TagPrefix="dp" TagName="DocumentList" %>

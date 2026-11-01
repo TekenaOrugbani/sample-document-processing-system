@@ -12,6 +12,9 @@ namespace DocumentProcessor.WebForms
         /// <summary>Application state key holding the resolved <see cref="DatabaseInfo"/>.</summary>
         public const string DatabaseInfoKey = "DatabaseInfo";
 
+        /// <summary>Application state key holding the <see cref="DocumentDbContextFactory"/>.</summary>
+        public const string DbContextFactoryKey = "DbContextFactory";
+
         protected void Application_Start(object sender, EventArgs e)
         {
             // Trace output has nowhere to go under IIS Express, so send it to a file next to
@@ -31,7 +34,7 @@ namespace DocumentProcessor.WebForms
                 Trace.TraceWarning(connection.Warning);
             }
 
-            DocumentDbContext.ConnectionString = connection.ConnectionString;
+            Application[DbContextFactoryKey] = new DocumentDbContextFactory(connection.ConnectionString);
             Application[DatabaseInfoKey] = connection.Info;
 
             try

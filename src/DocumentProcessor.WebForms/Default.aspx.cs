@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.UI;
 using DocumentProcessor.WebForms.Controls;
@@ -24,18 +25,32 @@ namespace DocumentProcessor.WebForms
             }
         }
 
+        /// <summary>Set by Global.asax at application start.</summary>
+        private DocumentDbContextFactory DbFactory
+        {
+            get { return (DocumentDbContextFactory)Application[Global.DbContextFactoryKey]; }
+        }
+
         protected void Uploader_UploadRequested(object sender, UploadEventArgs e)
         {
-            var storage = new FileSystemDocumentStorage();
-            var pipeline = new DocumentPipeline();
+            // Saving is asynchronous. Web Forms runs a page's asynchronous work as registered
+            // tasks (the page has Async="true"), which finish after PreRender and before the
+            // page renders. The uploader binds its notices at PreRenderComplete for that reason.
+            RegisterAsyncTask(new PageAsyncTask(() => UploadAsync(e.Files)));
+        }
 
-            foreach (var file in e.Files)
+        private async Task UploadAsync(IList<HttpPostedFile> files)
+        {
+            var storage = new FileSystemDocumentStorage();
+            var pipeline = new DocumentPipeline(DbFactory);
+
+            foreach (var file in files)
             {
                 var name = Path.GetFileName(file.FileName);
 
                 try
                 {
-                    var document = Store(storage, file, name);
+                    var document = await StoreAsync(storage, file, name);
 
                     // Summarizing runs on the request thread, so the browser waits for
                     // Bedrock to answer before the page comes back.
@@ -116,7 +131,7 @@ namespace DocumentProcessor.WebForms
             try
             {
                 // Soft delete: every query in this application filters IsDeleted out itself.
-                using (var db = new DocumentDbContext())
+                using (var db = DbFactory.CreateDbContext())
                 {
                     var document = db.Documents.FirstOrDefault(d => d.Id == documentId && !d.IsDeleted);
 
@@ -142,7 +157,7 @@ namespace DocumentProcessor.WebForms
         {
             try
             {
-                using (var db = new DocumentDbContext())
+                using (var db = DbFactory.CreateDbContext())
                 {
                     var documents = db.Documents
                         .Where(d => !d.IsDeleted)
@@ -161,15 +176,15 @@ namespace DocumentProcessor.WebForms
             }
         }
 
-        private static Document Find(Guid documentId)
+        private Document Find(Guid documentId)
         {
-            using (var db = new DocumentDbContext())
+            using (var db = DbFactory.CreateDbContext())
             {
                 return db.Documents.FirstOrDefault(d => d.Id == documentId && !d.IsDeleted);
             }
         }
 
-        private static Document Store(IDocumentStorage storage, HttpPostedFile file, string name)
+        private async Task<Document> StoreAsync(IDocumentStorage storage, HttpPostedFile file, string name)
         {
             var document = new Document
             {
@@ -182,9 +197,9 @@ namespace DocumentProcessor.WebForms
                 Status = DocumentStatus.Pending
             };
 
-            document.StoragePath = storage.Save(file.InputStream, name);
+            document.StoragePath = await storage.SaveAsync(file.InputStream, name);
 
-            using (var db = new DocumentDbContext())
+            using (var db = DbFactory.CreateDbContext())
             {
                 db.Documents.Add(document);
                 db.SaveChanges();

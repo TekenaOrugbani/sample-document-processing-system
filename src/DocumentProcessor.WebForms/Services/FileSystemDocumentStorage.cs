@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Web.Hosting;
 using DocumentProcessor.WebForms.Configuration;
 
@@ -18,7 +19,7 @@ namespace DocumentProcessor.WebForms.Services
             _rootPath = HostingEnvironment.MapPath(AppSettings.StorageRootPath);
         }
 
-        public string Save(Stream content, string fileName)
+        public async Task<string> SaveAsync(Stream content, string fileName)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -36,9 +37,9 @@ namespace DocumentProcessor.WebForms.Services
 
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-            using (var file = File.Create(fullPath))
+            using (var file = File.Create(fullPath, 81920, FileOptions.Asynchronous))
             {
-                content.CopyTo(file);
+                await content.CopyToAsync(file);
             }
 
             return relativePath;

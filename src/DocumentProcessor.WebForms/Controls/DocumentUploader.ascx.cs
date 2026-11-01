@@ -44,20 +44,26 @@ namespace DocumentProcessor.WebForms.Controls
             MaxFileSizeText.Text = AppSettings.StorageMaxFileSizeMegabytes.ToString();
         }
 
-        /// <summary>Adds a message shown under the dropzone. Call any time before PreRender.</summary>
+        /// <summary>Adds a message shown under the dropzone. Call any time before PreRenderComplete.</summary>
         public void Notify(string text, NotificationLevel level)
         {
             _notifications.Add(new Notification(text, level));
         }
 
-        protected override void OnPreRender(EventArgs e)
+        protected override void OnInit(EventArgs e)
         {
-            // Bound this late so the page can add messages from its own handlers, not just
-            // from the upload click below.
+            base.OnInit(e);
+
+            // Bound at the page's PreRenderComplete, the last point before rendering, so the
+            // page can add messages from its own handlers and from its asynchronous tasks
+            // (the upload runs as one), not just from the upload click below.
+            Page.PreRenderComplete += BindNotices;
+        }
+
+        private void BindNotices(object sender, EventArgs e)
+        {
             NoticeRepeater.DataSource = _notifications;
             NoticeRepeater.DataBind();
-
-            base.OnPreRender(e);
         }
 
         protected void UploadButton_Click(object sender, EventArgs e)

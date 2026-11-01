@@ -134,6 +134,7 @@
     <Compile Include="Data\DatabaseInfo.cs" />
     <Compile Include="Data\DatabaseInitializer.cs" />
     <Compile Include="Data\DocumentDbContext.cs" />
+    <Compile Include="Data\DocumentDbContextFactory.cs" />
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
