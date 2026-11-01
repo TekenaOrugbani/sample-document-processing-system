@@ -33,7 +33,7 @@ if (dbConnection.Warning is not null)
     startupLogger.LogWarning("{Warning}", dbConnection.Warning);
 }
 
-builder.Services.AddDbContext<DocumentDbContext>(options =>
+builder.Services.AddDbContextFactory<DocumentDbContext>(options =>
     options.UseSqlServer(dbConnection.ConnectionString));
 
 // Expose the resolved DatabaseInfo as a singleton so MainLayout can @inject it.
@@ -103,15 +103,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAntiforgery();
-
-// Root-route coverage: Default.aspx was the start page served at "/".
-// If no ported page owns @page "/" yet, redirect so the site root does not 404.
-// Once the Default.aspx port claims "/", this redirect becomes a no-op fallback.
-app.MapGet("/", context =>
-{
-    context.Response.Redirect("/Default");
-    return Task.CompletedTask;
-});
 
 // Modern Blazor Server entry (.NET 8+ pattern)
 app.MapRazorComponents<App>()

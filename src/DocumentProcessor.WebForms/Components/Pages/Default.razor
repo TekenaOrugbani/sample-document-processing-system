@@ -247,7 +247,12 @@
             Status = DocumentStatus.Pending
         };
 
-        await using var stream = file.OpenReadStream(maxAllowedSize: AppSettings.StorageMaxFileSizeBytes);
+        // Blazor's browser file stream only supports async reads, and Storage.Save
+        // copies synchronously, so buffer the upload first.
+        await using var browserStream = file.OpenReadStream(maxAllowedSize: AppSettings.StorageMaxFileSizeBytes);
+        using var stream = new MemoryStream();
+        await browserStream.CopyToAsync(stream);
+        stream.Position = 0;
         document.StoragePath = Storage.Save(stream, name);
 
         using var db = await DbFactory.CreateDbContextAsync();
