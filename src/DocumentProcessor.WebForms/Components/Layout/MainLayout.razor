@@ -1,0 +1,68 @@
+@inherits LayoutComponentBase
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @_runtimeName
+        </span>
+        <span class="@_databasePillClass">
+            <i class="@_databasePillIconClass"></i>
+            @_databasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @_credentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @_providerNameText
+</footer>
+
+@code {
+    private string _runtimeName = string.Empty;
+    private string _databasePillClass = "db-pill";
+    private string _databasePillIconClass = "bi bi-database";
+    private string _databasePillText = "Database not resolved";
+    private string _credentialSourceText = "unavailable";
+    private string _providerNameText = "no database";
+
+    [Inject]
+    private DocumentProcessor.WebForms.Data.DatabaseInfo? DatabaseInfo { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _runtimeName = GetFrameworkName();
+
+        if (DatabaseInfo is null)
+        {
+            return;
+        }
+
+        var isPostgres = DatabaseInfo.Provider == DocumentProcessor.WebForms.Data.DatabaseProvider.PostgreSql;
+
+        _databasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        _databasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+        _databasePillText = DatabaseInfo.DisplayName + " \u00b7 " + DatabaseInfo.LocationLabel;
+        _credentialSourceText = DatabaseInfo.CredentialSource;
+        _providerNameText = DatabaseInfo.DisplayName;
+    }
+
+    private static string GetFrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly
+            .GetCustomAttribute<System.Runtime.Versioning.TargetFrameworkAttribute>();
+        return target is not null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
