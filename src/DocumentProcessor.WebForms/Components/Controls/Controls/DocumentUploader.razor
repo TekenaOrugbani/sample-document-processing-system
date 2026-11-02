@@ -1,0 +1,184 @@
+@using DocumentProcessor.WebForms.Configuration
+@using DocumentProcessor.WebForms.Models
+@using DocumentProcessor.WebForms.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject AppSettings AppSettings
+
+<h1 class="upload-title">Upload a document and I'll summarize it.</h1>
+<p class="upload-subtitle">
+    @FileTypeSummaryText
+    &middot; up to @MaxFileSizeText MB
+</p>
+
+<div class="dropzone">
+    <InputFile OnChange="OnFilesSelected" multiple class="dropzone-input"
+               title="Drag files here or click to browse" @ref="_inputFileRef" />
+    <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+    <p class="dropzone-hint">Drag files here</p>
+    <span class="btn-brand">Browse files</span>
+</div>
+
+@if (_selectedFiles.Count > 0)
+{
+    <ul class="selected-list">
+        @foreach (var file in _selectedFiles)
+        {
+            <li class="selected-item">
+                <small>@file.Name (@FormatSize(file.Size))</small>
+            </li>
+        }
+    </ul>
+
+    <div class="d-flex gap-2 mt-3">
+        @if (_isUploading)
+        {
+            <span class="btn-brand is-busy">
+                <span class="spinner-border spinner-border-sm me-1"></span>Uploading...
+            </span>
+        }
+        else
+        {
+            <button type="button" class="btn-brand" @onclick="OnUploadClick">
+                @(_selectedFiles.Count == 1 ? "Upload 1 file" : $"Upload {_selectedFiles.Count} files")
+            </button>
+        }
+        <button type="button" class="btn-quiet" disabled="@_isUploading" @onclick="OnClearClick">Clear</button>
+    </div>
+}
+
+@if (_isUploading)
+{
+    <p class="upload-status">
+        Uploading @_selectedFiles.Count @(_selectedFiles.Count == 1 ? "file" : "files").
+        Each document is summarized before the page comes back, so this can take a while.
+    </p>
+}
+
+@foreach (var notice in Notifications)
+{
+    <div class="notice notice-@notice.CssSuffix">
+        <i class="bi @notice.IconClass"></i>
+        <span>@notice.Text</span>
+    </div>
+}
+
+@code {
+    private List<IBrowserFile> _selectedFiles = new();
+    private bool _isUploading;
+    private InputFile? _inputFileRef;
+
+    /// <summary>
+    /// Raised once the posted files have passed size and extension checks. The parent page
+    /// processes them through the pipeline; this control only deals with the form.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IList<IBrowserFile>> UploadRequested { get; set; }
+
+    /// <summary>
+    /// Notifications to display under the dropzone. The parent page can pass messages
+    /// (e.g. pipeline results) via this parameter.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<Notification> Notifications { get; set; } = Array.Empty<Notification>();
+
+    private string FileTypeSummaryText => string.Join(", ",
+        AppSettings.StorageAllowedExtensions
+            .Select(ext => ext.TrimStart('.').ToUpperInvariant()));
+
+    private string MaxFileSizeText => AppSettings.StorageMaxFileSizeMegabytes.ToString();
+
+    private void OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFiles = e.GetMultipleFiles(maximumFileCount: AppSettings.StorageMaxFilesPerUpload + 10)
+            .ToList();
+    }
+
+    private void OnClearClick()
+    {
+        _selectedFiles.Clear();
+    }
+
+    private async Task OnUploadClick()
+    {
+        if (_isUploading)
+        {
+            return;
+        }
+
+        var maxFiles = AppSettings.StorageMaxFilesPerUpload;
+        var maxBytes = AppSettings.StorageMaxFileSizeBytes;
+        var allowed = AppSettings.StorageAllowedExtensions;
+
+        var posted = _selectedFiles
+            .Where(file => !string.IsNullOrEmpty(file.Name))
+            .ToList();
+
+        if (posted.Count == 0)
+        {
+            return;
+        }
+
+        // Trim to max file count — notifications for this case are handled by the parent
+        // page after it receives the accepted list, matching the original control's behavior
+        // where the page owned notification display.
+        if (posted.Count > maxFiles)
+        {
+            posted = posted.Take(maxFiles).ToList();
+        }
+
+        var accepted = new List<IBrowserFile>();
+
+        foreach (var file in posted)
+        {
+            var name = Path.GetFileName(file.Name);
+
+            if (file.Size > maxBytes)
+            {
+                // Parent page handles "exceeds X MB" notification via its own logic
+                continue;
+            }
+
+            var extension = Path.GetExtension(name).ToLowerInvariant();
+
+            if (!allowed.Contains(extension) || !DocumentTextExtractor.CanExtract(extension))
+            {
+                // Parent page handles "not a supported file type" notification
+                continue;
+            }
+
+            accepted.Add(file);
+        }
+
+        if (accepted.Count > 0)
+        {
+            _isUploading = true;
+            StateHasChanged();
+
+            try
+            {
+                await UploadRequested.InvokeAsync(accepted);
+            }
+            finally
+            {
+                _isUploading = false;
+                _selectedFiles.Clear();
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB" };
+        double size = bytes;
+        int unit = 0;
+
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        return $"{Math.Round(size, 2)} {units[unit]}";
+    }
+}
