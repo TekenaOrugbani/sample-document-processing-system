@@ -1,0 +1,246 @@
+@page "/"
+@page "/Default"
+@rendermode InteractiveServer
+
+@using DocumentProcessor.WebForms.Data
+@using DocumentProcessor.WebForms.Models
+@using DocumentProcessor.WebForms.Services
+@using Microsoft.EntityFrameworkCore
+
+@inject IDbContextFactory<DocumentDbContext> DbFactory
+@inject IDocumentStorage Storage
+@inject DocumentPipeline Pipeline
+@inject ILogger<Default> Logger
+
+<PageTitle>Document Processor</PageTitle>
+
+<div class="app-grid">
+    <section>
+        @* File upload is outside the list section on purpose — parity with the original
+           where uploading was a full postback outside the UpdatePanel. *@
+        <DocumentUploader @ref="Uploader" UploadRequested="Uploader_UploadRequested" />
+    </section>
+
+    <section>
+        <DocumentList Documents="documents"
+                      RefreshRequested="Documents_RefreshRequested"
+                      ViewSummaryRequested="Documents_ViewSummaryRequested"
+                      DeleteRequested="Documents_DeleteRequested" />
+
+        @if (showSummaryModal)
+        {
+            <div class="modal fade show d-block modal-backdrop-tint" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h6 class="modal-title">@summaryModalTitle</h6>
+                            <button type="button" class="btn-close" @onclick="CloseSummaryModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>@summaryModalBody</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" @onclick="CloseSummaryModal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (showDeleteModal)
+        {
+            <div class="modal fade show d-block modal-backdrop-tint" tabindex="-1">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h6 class="modal-title">Delete document?</h6>
+                            <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-0"><strong>@deleteModalFileName</strong></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="ConfirmDelete">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private const int MaxDocumentsShown = 50;
+
+    private DocumentUploader Uploader = default!;
+
+    private IList<Document> documents = new List<Document>();
+
+    // Summary modal state
+    private bool showSummaryModal;
+    private string summaryModalTitle = string.Empty;
+    private string summaryModalBody = string.Empty;
+
+    // Delete modal state (replaces ViewState[DeleteTargetKey])
+    private bool showDeleteModal;
+    private string deleteModalFileName = string.Empty;
+    private Guid? deleteTargetId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentsAsync();
+    }
+
+    private async Task Uploader_UploadRequested(IList<IBrowserFile> files)
+    {
+        foreach (var file in files)
+        {
+            var name = Path.GetFileName(file.Name);
+
+            try
+            {
+                var document = await StoreAsync(file, name);
+
+                // Summarizing runs synchronously on the request thread today; the pipeline
+                // will be made async when the AWS SDK calls migrate to async.
+                Pipeline.Process(document.Id);
+
+                Uploader.Notify($"'{name}' processed", NotificationLevel.Success);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Upload failed for {FileName}", name);
+                Uploader.Notify($"'{name}' failed to upload", NotificationLevel.Danger);
+            }
+        }
+
+        await LoadDocumentsAsync();
+    }
+
+    private async Task Documents_RefreshRequested()
+    {
+        await LoadDocumentsAsync();
+    }
+
+    private async Task Documents_ViewSummaryRequested(Guid documentId)
+    {
+        var document = await FindAsync(documentId);
+
+        if (document == null)
+        {
+            Uploader.Notify("That document is no longer available.", NotificationLevel.Warning);
+            await LoadDocumentsAsync();
+            return;
+        }
+
+        summaryModalTitle = document.OriginalFileName;
+        summaryModalBody = document.Summary ?? string.Empty;
+        showSummaryModal = true;
+    }
+
+    private void CloseSummaryModal()
+    {
+        showSummaryModal = false;
+    }
+
+    private async Task Documents_DeleteRequested(Guid documentId)
+    {
+        var document = await FindAsync(documentId);
+
+        if (document == null)
+        {
+            Uploader.Notify("That document is no longer available.", NotificationLevel.Warning);
+            await LoadDocumentsAsync();
+            return;
+        }
+
+        deleteTargetId = document.Id;
+        deleteModalFileName = document.OriginalFileName;
+        showDeleteModal = true;
+    }
+
+    private void CancelDelete()
+    {
+        deleteTargetId = null;
+        showDeleteModal = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deleteTargetId is not Guid documentId)
+        {
+            showDeleteModal = false;
+            return;
+        }
+
+        try
+        {
+            // Soft delete: the EF Core global query filter hides deleted documents automatically.
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == documentId);
+
+            if (document != null)
+            {
+                document.IsDeleted = true;
+                await db.SaveChangesAsync();
+            }
+
+            deleteTargetId = null;
+            showDeleteModal = false;
+            await LoadDocumentsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Delete failed for document {DocumentId}", documentId);
+            Uploader.Notify("Could not delete the document.", NotificationLevel.Danger);
+        }
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            documents = await db.Documents
+                .OrderByDescending(d => d.UploadedAt)
+                .Take(MaxDocumentsShown)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not load documents");
+            documents = new List<Document>();
+            Uploader.Notify("Could not load documents.", NotificationLevel.Danger);
+        }
+    }
+
+    private async Task<Document?> FindAsync(Guid documentId)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        return await db.Documents.FirstOrDefaultAsync(d => d.Id == documentId);
+    }
+
+    private async Task<Document> StoreAsync(IBrowserFile file, string name)
+    {
+        var document = new Document
+        {
+            FileName = name,
+            OriginalFileName = name,
+            FileExtension = Path.GetExtension(name).ToLowerInvariant(),
+            ContentType = file.ContentType,
+            FileSize = file.Size,
+            UploadedAt = DateTimeOffset.UtcNow,
+            Status = DocumentStatus.Pending
+        };
+
+        await using var stream = file.OpenReadStream(maxAllowedSize: file.Size);
+        document.StoragePath = Storage.Save(stream, name);
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.Documents.Add(document);
+        await db.SaveChangesAsync();
+
+        return document;
+    }
+}
