@@ -1,0 +1,82 @@
+@inherits LayoutComponentBase
+@using System.Reflection
+@using System.Runtime.Versioning
+@using DocumentProcessor.WebForms.Data
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    @* Reports the engine the app is actually connected to; flips to the PostgreSQL
+       styling once the connection string points at Aurora. *@
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @runtimeName
+        </span>
+        <span class="@DatabasePillClass">
+            <i class="@DatabasePillIconClass"></i>
+            @databasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @credentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @providerNameText
+</footer>
+
+@* PORT-TODO *@
+@* {"note": "TitleContent placeholder — pages that need a custom <title> should use <PageTitle>...</PageTitle> which is rendered by App.razor's <HeadOutlet />"} *@
+
+@code {
+    private string runtimeName = string.Empty;
+    private string databasePillText = string.Empty;
+    private string credentialSourceText = string.Empty;
+    private string providerNameText = string.Empty;
+    private string DatabasePillClass = "db-pill";
+    private string DatabasePillIconClass = "bi bi-database";
+
+    // PORT-TODO
+    // {"was": "System.Web.HttpContext.Current.Application[Global.DatabaseInfoKey]", "note": "DatabaseInfo was stored in Application state as a singleton. Register DatabaseInfo as a singleton service in DI (Program.cs) and inject it here. For now injected via the field below.", "files": ["Program.cs"]}
+    [Inject]
+    private DatabaseInfo? DatabaseInfoService { get; set; }
+
+    protected override void OnInitialized()
+    {
+        runtimeName = GetFrameworkName();
+
+        if (DatabaseInfoService is null)
+        {
+            databasePillText = "Database not resolved";
+            credentialSourceText = "unavailable";
+            providerNameText = "no database";
+            return;
+        }
+
+        var isPostgres = DatabaseInfoService.Provider == DatabaseProvider.PostgreSql;
+
+        DatabasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        DatabasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        databasePillText = DatabaseInfoService.DisplayName + " \u00b7 " + DatabaseInfoService.LocationLabel;
+        credentialSourceText = DatabaseInfoService.CredentialSource;
+        providerNameText = DatabaseInfoService.DisplayName;
+    }
+
+    /// <summary>The framework the app was compiled for, e.g. ".NET 10.0".</summary>
+    private static string GetFrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+        return target != null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
