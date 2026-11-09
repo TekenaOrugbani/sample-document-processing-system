@@ -1,0 +1,201 @@
+@using DocumentProcessor.WebForms.Configuration
+@using DocumentProcessor.WebForms.Models
+@using DocumentProcessor.WebForms.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JS
+
+<h1 class="upload-title">Upload a document and I'll summarize it.</h1>
+<p class="upload-subtitle">
+    @_fileTypeSummaryText
+    &middot; up to @AppSettings.StorageMaxFileSizeMegabytes MB
+</p>
+
+<div class="dropzone">
+    @* InputFile replaces the asp:FileUpload; CSS class stretches it over the dropzone
+       just as the original .dropzone-input did. *@
+    <InputFile OnChange="OnFilesSelected" multiple class="dropzone-input"
+               title="Drag files here or click to browse" @ref="_inputFileRef" />
+    <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+    <p class="dropzone-hint">Drag files here</p>
+    <span class="btn-brand">Browse files</span>
+</div>
+
+@* Selected file list — rendered by component state instead of JS-built DOM *@
+<ul class="selected-list">
+    @foreach (var file in _selectedFiles)
+    {
+        <li class="selected-item">
+            <small>@file.Name (@FormatSize(file.Size))</small>
+        </li>
+    }
+</ul>
+
+@if (_selectedFiles.Count > 0)
+{
+    <div class="d-flex gap-2 mt-3">
+        <button class="@(_submitting ? "btn-brand is-busy" : "btn-brand")"
+                @onclick="HandleUploadClick" disabled="@_submitting">
+            @if (_submitting)
+            {
+                <span>
+                    <span class="spinner-border spinner-border-sm me-1"></span>Uploading...
+                </span>
+            }
+            else
+            {
+                <span>@(_selectedFiles.Count == 1 ? "Upload 1 file" : $"Upload {_selectedFiles.Count} files")</span>
+            }
+        </button>
+        <button type="button" class="btn-quiet" @onclick="ClearSelection" disabled="@_submitting">Clear</button>
+    </div>
+}
+
+@if (_submitting)
+{
+    <p class="upload-status">
+        Uploading @_selectedFiles.Count @(_selectedFiles.Count == 1 ? "file" : "files").
+        Each document is summarized before the page comes back, so this can take a while.
+        Leaving the page cancels it.
+    </p>
+}
+
+@foreach (var notice in _notifications)
+{
+    <div class="notice notice-@notice.CssSuffix">
+        <i class="bi @notice.IconClass"></i>
+        <span>@notice.Text</span>
+    </div>
+}
+
+@code {
+    private InputFile? _inputFileRef;
+    private List<IBrowserFile> _selectedFiles = new();
+    private readonly List<Notification> _notifications = new();
+    private bool _submitting;
+    private string _fileTypeSummaryText = string.Empty;
+
+    /// <summary>
+    /// Raised once the posted files have passed size and extension checks.
+    /// The parent page stores them and runs the pipeline; this control only deals with the form.
+    /// The callback receives the list of accepted IBrowserFile instances.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<IBrowserFile>> UploadRequested { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var extensions = AppSettings.StorageAllowedExtensions
+            .Select(ext => ext.TrimStart('.').ToUpperInvariant());
+
+        _fileTypeSummaryText = string.Join(", ", extensions);
+    }
+
+    /// <summary>Adds a message shown under the dropzone. Call before the next render.</summary>
+    public void Notify(string text, NotificationLevel level)
+    {
+        _notifications.Add(new Notification(text, level));
+        StateHasChanged();
+    }
+
+    private void OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        _notifications.Clear();
+        _selectedFiles = e.GetMultipleFiles(maximumFileCount: AppSettings.StorageMaxFilesPerUpload + 10)
+            .ToList();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedFiles.Clear();
+        _notifications.Clear();
+    }
+
+    private async Task HandleUploadClick()
+    {
+        if (_submitting)
+        {
+            return;
+        }
+
+        _notifications.Clear();
+        _submitting = true;
+
+        try
+        {
+            var maxFiles = AppSettings.StorageMaxFilesPerUpload;
+            var maxBytes = AppSettings.StorageMaxFileSizeBytes;
+            var allowed = AppSettings.StorageAllowedExtensions;
+
+            var posted = _selectedFiles
+                .Where(file => !string.IsNullOrEmpty(file.Name))
+                .ToList();
+
+            if (posted.Count == 0)
+            {
+                Notify("Choose at least one file to upload.", NotificationLevel.Warning);
+                return;
+            }
+
+            if (posted.Count > maxFiles)
+            {
+                Notify(
+                    $"Only the first {maxFiles} files were taken from this upload.",
+                    NotificationLevel.Warning);
+
+                posted = posted.Take(maxFiles).ToList();
+            }
+
+            var accepted = new List<IBrowserFile>();
+
+            foreach (var file in posted)
+            {
+                var name = Path.GetFileName(file.Name);
+
+                if (file.Size > maxBytes)
+                {
+                    Notify(
+                        $"'{name}' exceeds {AppSettings.StorageMaxFileSizeMegabytes} MB",
+                        NotificationLevel.Warning);
+                    continue;
+                }
+
+                var extension = Path.GetExtension(name).ToLowerInvariant();
+
+                if (!allowed.Contains(extension) || !DocumentTextExtractor.CanExtract(extension))
+                {
+                    Notify(
+                        $"'{name}' is not a supported file type",
+                        NotificationLevel.Warning);
+                    continue;
+                }
+
+                accepted.Add(file);
+            }
+
+            if (accepted.Count > 0)
+            {
+                await UploadRequested.InvokeAsync(accepted);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double size = bytes;
+        var unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        return $"{Math.Round(size * 100) / 100} {units[unit]}";
+    }
+}

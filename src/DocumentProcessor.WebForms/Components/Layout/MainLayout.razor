@@ -1,0 +1,74 @@
+@inherits LayoutComponentBase
+@using System.Reflection
+@using System.Runtime.Versioning
+@using DocumentProcessor.WebForms.Data
+
+@inject DatabaseInfo? DbInfo
+
+<header class="app-bar">
+    <div class="app-brand">
+        <span class="app-brand-mark"><i class="bi bi-stars"></i></span>
+        <span>Document Processor</span>
+    </div>
+
+    <div class="app-bar-pills">
+        <span class="runtime-pill">
+            <i class="bi bi-cpu"></i>
+            @runtimePillText
+        </span>
+        <span class="@databasePillClass">
+            <i class="@databasePillIconClass"></i>
+            @databasePillText
+        </span>
+    </div>
+</header>
+
+<main class="app-main">
+    @Body
+</main>
+
+<footer class="app-footer">
+    Config: @credentialSourceText
+    <span class="app-footer-separator">&middot;</span>
+    Summaries stored in @providerNameText
+</footer>
+
+@code {
+    private string runtimePillText = string.Empty;
+    private string databasePillText = string.Empty;
+    private string databasePillClass = "db-pill";
+    private string databasePillIconClass = "bi bi-database";
+    private string credentialSourceText = string.Empty;
+    private string providerNameText = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        runtimePillText = GetFrameworkName();
+
+        if (DbInfo is null)
+        {
+            databasePillText = "Database not resolved";
+            credentialSourceText = "unavailable";
+            providerNameText = "no database";
+            return;
+        }
+
+        var isPostgres = DbInfo.Provider == DatabaseProvider.PostgreSql;
+
+        databasePillClass = isPostgres ? "db-pill db-pill-postgres" : "db-pill";
+        databasePillIconClass = isPostgres ? "bi bi-rocket-takeoff-fill" : "bi bi-database";
+
+        databasePillText = DbInfo.DisplayName + " \u00b7 " + DbInfo.LocationLabel;
+        credentialSourceText = DbInfo.CredentialSource;
+        providerNameText = DbInfo.DisplayName;
+    }
+
+    /// <summary>The framework the app was compiled for, e.g. ".NET 10.0".</summary>
+    private static string GetFrameworkName()
+    {
+        var target = typeof(MainLayout).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+        return target is not null && !string.IsNullOrEmpty(target.FrameworkDisplayName)
+            ? target.FrameworkDisplayName
+            : ".NET";
+    }
+}
